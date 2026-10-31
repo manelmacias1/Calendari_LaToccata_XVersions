@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendari de Bandes: LA TOCCATA & X-VERSIONS</title>
+    <!-- Tailwind CSS per a un disseny modern i elegant -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <!-- Google Fonts: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tooltip {
+            visibility: hidden;
+            position: absolute;
+            z-index: 50;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #1f2937;
+            color: #fff;
+            text-align: center;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .has-tooltip:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
+
+    <!-- Capçalera Principal -->
+    <header class="bg-slate-900 border-b border-slate-800 py-6 px-4 shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-500 to-emerald-400">
+                    🎵 CALENDARI DE BANDES
+                </h1>
+                <p class="text-xs md:text-sm text-slate-400 mt-1">Gestió en temps real: LA TOCCATA & X-VERSIONS</p>
+            </div>
+            
+            <!-- Selector d'Any -->
+            <div class="flex items-center gap-3 bg-slate-800/80 px-4 py-2 rounded-xl border border-slate-700">
+                <button onclick="canviarAny(-1)" class="text-slate-400 hover:text-white px-2 font-bold text-lg">❮</button>
+                <span id="label-any" class="font-bold text-lg text-amber-400">2026</span>
+                <button onclick="canviarAny(1)" class="text-slate-400 hover:text-white px-2 font-bold text-lg">❯</button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contingut Principal: Graella de Mesos -->
+    <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
+        <!-- Llegenda Interactiva / Informativa -->
+        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 mb-8 shadow-xl">
+            <h2 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Llegenda de Tipologies</h2>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span> Bolos LA TOCCATA</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-amber-300 shadow-sm"></span> Reserves LA TOCCATA</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-blue-300 shadow-sm"></span> Assaig LA TOCCATA</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-emerald-600 shadow-sm shadow-emerald-600/50"></span> Bolos X-VERSIONS</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-emerald-300 shadow-sm"></span> Reserves X-VERSIONS</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-pink-300 shadow-sm"></span> Assaig X-VERSIONS</div>
+                <div class="flex items-center gap-2"><span class="w-4 h-4 rounded-full bg-slate-600 shadow-sm"></span> Dates bloquejades</div>
+            </div>
+        </div>
+
+        <!-- Graella dels 12 mesos -->
+        <div id="grid-mesos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- S'omplirà automàticament amb JavaScript -->
+        </div>
+    </main>
+
+    <!-- Finestra Modal per editar un dia -->
+    <div id="modal-dia" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
+            <h3 id="modal-títol" class="text-lg font-bold text-white mb-2">Editar Data</h3>
+            <p id="modal-subtítol" class="text-xs text-slate-400 mb-4"></p>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Tipus d'Esdeveniment / Estat</label>
+                    <select id="select-tipus" class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500">
+                        <option value="">-- Cap / Esborrar estat --</option>
+                        <option value="bolo-toc">Bolos LA TOCCATA (Taronja fort)</option>
+                        <option value="res-toc">Reserves LA TOCCATA (Taronja claret)</option>
+                        <option value="assaig-toc">Assaig LA TOCCATA (Blau claret)</option>
+                        <option value="bolo-x">Bolos X-VERSIONS (Verd fort)</option>
+                        <option value="res-x">Reserves X-VERSIONS (Verd claret)</option>
+                        <option value="assaig-x">Assaig X-VERSIONS (Rosa claret)</option>
+                        <option value="bloquejat">Dates bloquejades (Gris)</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">Descripció / Detalls</label>
+                    <textarea id="input-descripcio" rows="3" placeholder="Ex: Restaurant El Jardí, 22:00h..." class="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 mt-6">
+                <button onclick="tancarModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel·lar</button>
+                <button onclick="guardarCanvisDia()" class="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-500 transition shadow-lg shadow-orange-6
