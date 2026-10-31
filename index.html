@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendari de Bandes: LA TOCCATA & X-VERSIONS</title>
-    <!-- Tailwind CSS per a un disseny modern i elegant -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs compat -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <!-- Google Fonts: Inter -->
@@ -58,9 +58,14 @@
         </div>
     </header>
 
-    <!-- Contingut Principal: Graella de Mesos -->
+    <!-- Contingut Principal -->
     <main class="max-w-7xl mx-auto px-4 py-8 flex-grow w-full">
-        <!-- Llegenda Interactiva / Informativa -->
+        <!-- Estat de connexió -->
+        <div id="estat-connexio" class="mb-4 text-xs text-center py-2 px-4 rounded-xl bg-slate-900 border border-slate-800 text-slate-400">
+            Connectant amb la base de dades en temps real...
+        </div>
+
+        <!-- Llegenda -->
         <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 mb-8 shadow-xl">
             <h2 class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-3">Llegenda de Tipologies</h2>
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 text-xs">
@@ -76,11 +81,11 @@
 
         <!-- Graella dels 12 mesos -->
         <div id="grid-mesos" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <!-- S'omplirà automàticament amb JavaScript -->
+            <!-- S'omplirà automàticament -->
         </div>
     </main>
 
-    <!-- Finestra Modal per editar un dia -->
+    <!-- Finestra Modal -->
     <div id="modal-dia" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl relative">
             <h3 id="modal-títol" class="text-lg font-bold text-white mb-2">Editar Data</h3>
@@ -109,4 +114,169 @@
 
             <div class="flex justify-end gap-3 mt-6">
                 <button onclick="tancarModal()" class="px-4 py-2 rounded-xl bg-slate-800 text-slate-300 text-sm hover:bg-slate-700 transition">Cancel·lar</button>
-                <button onclick="guardarCanvisDia()" class="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-500 transition shadow-lg shadow-orange-6
+                <button onclick="guardarCanvisDia()" class="px-4 py-2 rounded-xl bg-orange-600 text-white text-sm font-semibold hover:bg-orange-500 transition shadow-lg shadow-orange-600/30">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peu de pàgina -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        Calendari col·laboratiu en temps real per a LA TOCCATA & X-VERSIONS &copy; 2026
+    </footer>
+
+    <!-- Script -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyAWD0gwevEeqFoAuX2ot0HhQ7acoPQ7JAg",
+            authDomain: "calendari-toccata-xversions.firebaseapp.com",
+            databaseURL: "https://calendari-toccata-xversions-default-rtdb.europe-west1.firebasedatabase.app",
+            projectId: "calendari-toccata-xversions",
+            storageBucket: "calendari-toccata-xversions.firebasestorage.app",
+            messagingSenderId: "11108563025",
+            appId: "1:11108563025:web:2ad3825d241e6b01c72070",
+            measurementId: "G-WV5YHLM52J"
+        };
+
+        // Inicialitzar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.error("Error en inicialitzar Firebase:", e);
+        }
+        
+        const db = firebase.database();
+        let anyActual = 2026;
+        let dadesCalendari = {};
+        let dataSeleccionada = null;
+
+        const mesosNoms = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
+        const diesSetmanaNoms = ["Dl", "Dt", "Dc", "Dj", "Dv", "Ds", "Dg"];
+
+        function iniciarEscoltaFirebase() {
+            const estatDiv = document.getElementById('estat-connexio');
+            estatDiv.innerText = "Connectat a Firebase en temps real 🟢";
+            estatDiv.className = "mb-4 text-xs text-center py-2 px-4 rounded-xl bg-emerald-950/50 border border-emerald-800 text-emerald-400";
+
+            const ref = db.ref('calendaris/' + anyActual);
+            ref.on('value', (snapshot) => {
+                dadesCalendari = snapshot.val() || {};
+                renderitzarCalendari();
+            }, (error) => {
+                console.error("Error de lectura a Firebase:", error);
+                estatDiv.innerText = "Error de connexió a la base de dades. Revisa les regles de Firebase.";
+                estatDiv.className = "mb-4 text-xs text-center py-2 px-4 rounded-xl bg-red-950/50 border border-red-800 text-red-400";
+            });
+        }
+
+        function canviarAny(direccio) {
+            anyActual += direccio;
+            document.getElementById('label-any').innerText = anyActual;
+            iniciarEscoltaFirebase();
+        }
+
+        function obtenirEstilTipus(tipus) {
+            switch(tipus) {
+                case 'bolo-toc': return 'bg-orange-500 text-white font-bold shadow-md shadow-orange-500/40';
+                case 'res-toc': return 'bg-amber-300 text-slate-950 font-semibold';
+                case 'assaig-toc': return 'bg-blue-300 text-slate-950 font-semibold';
+                case 'bolo-x': return 'bg-emerald-600 text-white font-bold shadow-md shadow-emerald-600/40';
+                case 'res-x': return 'bg-emerald-300 text-slate-950 font-semibold';
+                case 'assaig-x': return 'bg-pink-300 text-slate-950 font-semibold';
+                case 'bloquejat': return 'bg-slate-700 text-slate-400 line-through';
+                default: return 'bg-slate-900/50 text-slate-300 hover:bg-slate-800';
+            }
+        }
+
+        function renderitzarCalendari() {
+            const container = document.getElementById('grid-mesos');
+            container.innerHTML = '';
+
+            for (let m = 0; m < 12; m++) {
+                const mesCard = document.createElement('div');
+                mesCard.className = 'bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col justify-between';
+
+                let html = `<div class="text-center font-bold text-sm tracking-wider uppercase text-amber-400 pb-3 border-b border-slate-800 mb-3">${mesosNoms[m]}</div>`;
+                
+                html += `<div class="grid grid-cols-7 gap-1 text-center text-[10px] font-semibold text-slate-500 mb-2">`;
+                diesSetmanaNoms.forEach(d => html += `<div>${d}</div>`);
+                html += `</div>`;
+
+                html += `<div class="grid grid-cols-7 gap-1.5 text-center text-xs">`;
+
+                let primerDiaIndex = new Date(anyActual, m, 1).getDay();
+                primerDiaIndex = (primerDiaIndex === 0) ? 6 : primerDiaIndex - 1; 
+                
+                const totalDies = new Date(anyActual, m + 1, 0).getDate();
+
+                for (let i = 0; i < primerDiaIndex; i++) {
+                    html += `<div class="h-8"></div>`;
+                }
+
+                for (let d = 1; d <= totalDies; d++) {
+                    const mesStr = String(m + 1).padStart(2, '0');
+                    const diaStr = String(d).padStart(2, '0');
+                    const clauData = `${anyActual}-${mesStr}-${diaStr}`;
+                    
+                    const dadaDia = dadesCalendari[clauData] || {};
+                    const classeEstil = obtenirEstilTipus(dadaDia.tipus);
+
+                    if (dadaDia.tipus && dadaDia.descripcio) {
+                        html += `
+                            <div onclick="obrirModal('${clauData}', ${d}, '${mesosNoms[m]}')" 
+                                 class="has-tooltip relative h-8 flex items-center justify-center rounded-lg cursor-pointer transition transform active:scale-95 ${classeEstil}">
+                                ${d}
+                                <div class="tooltip">${dadaDia.descripcio}</div>
+                            </div>`;
+                    } else {
+                        html += `
+                            <div onclick="obrirModal('${clauData}', ${d}, '${mesosNoms[m]}')" 
+                                 class="h-8 flex items-center justify-center rounded-lg cursor-pointer transition transform active:scale-95 ${classeEstil}">
+                                ${d}
+                            </div>`;
+                    }
+                }
+
+                html += `</div>`;
+                mesCard.innerHTML = html;
+                container.appendChild(mesCard);
+            }
+        }
+
+        function obrirModal(clauData, diaNum, nomMes) {
+            dataSeleccionada = clauData;
+            document.getElementById('modal-títol').innerText = `Editar Dia: ${diaNum} de ${nomMes} ${anyActual}`;
+            document.getElementById('modal-subtítol').innerText = `Clau: ${clauData}`;
+            
+            const dadaActual = dadesCalendari[clauData] || { tipus: '', descripcio: '' };
+            document.getElementById('select-tipus').value = dadaActual.tipus || '';
+            document.getElementById('input-descripcio').value = dadaActual.descripcio || '';
+
+            document.getElementById('modal-dia').classList.remove('hidden');
+        }
+
+        function tancarModal() {
+            document.getElementById('modal-dia').classList.add('hidden');
+            dataSeleccionada = null;
+        }
+
+        function guardarCanvisDia() {
+            if (!dataSeleccionada) return;
+
+            const tipus = document.getElementById('select-tipus').value;
+            const descripcio = document.getElementById('input-descripcio').value.trim();
+
+            const ref = db.ref(`calendaris/${anyActual}/${dataSeleccionada}`);
+
+            if (!tipus && !descripcio) {
+                ref.remove().then(() => tancarModal());
+            } else {
+                ref.set({ tipus, descripcio }).then(() => tancarModal());
+            }
+        }
+
+        window.onload = function() {
+            iniciarEscoltaFirebase();
+        };
+    </script>
+</body>
+</html>
